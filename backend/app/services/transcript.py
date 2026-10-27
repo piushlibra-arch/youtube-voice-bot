@@ -4,9 +4,11 @@ To swap in a different transcript source, only change `fetch_transcript`;
 it must return a list of {"text": str, "start": float, "duration": float}.
 It is blocking, so callers run it in a worker thread.
 """
+import os
 import threading
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
 
 # One client (and its HTTP session) per worker thread: reuses keep-alive connections to
 # YouTube instead of a new TCP + TLS handshake on every fetch. requests.Session isn't
@@ -19,8 +21,15 @@ class TranscriptError(Exception):
 
 
 def _api() -> YouTubeTranscriptApi:
-    if not hasattr(_local, "api"):
-        _local.api = YouTubeTranscriptApi()
+    proxy_url = os.getenv("YOUTUBE_PROXY", "").strip() or None
+    curr_proxy = getattr(_local, "proxy_url", object())
+    if not hasattr(_local, "api") or curr_proxy != proxy_url:
+        if proxy_url:
+            proxy_cfg = GenericProxyConfig(http_url=proxy_url, https_url=proxy_url)
+            _local.api = YouTubeTranscriptApi(proxy_config=proxy_cfg)
+        else:
+            _local.api = YouTubeTranscriptApi()
+        _local.proxy_url = proxy_url
     return _local.api
 
 

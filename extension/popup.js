@@ -1,4 +1,5 @@
-const API = "http://localhost:8000";
+// Backend API URL. Set to your AWS App Runner or EC2 URL when deploying (e.g. "https://xxxxxx.us-east-1.awsapprunner.com")
+let API = "http://localhost:8000";
 const $ = (id) => document.getElementById(id);
 let tabId, tabIndex, videoId;
 let answerText = "", speechCtl = null, audioUrl = null;
@@ -283,6 +284,10 @@ window.addEventListener("pagehide", () => stopListening(true));
 
 async function init() {
   try {
+    if (chrome?.storage?.sync) {
+      const data = await chrome.storage.sync.get(["apiUrl"]);
+      if (data?.apiUrl) API = data.apiUrl.replace(/\/+$/, "");
+    }
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     tabId = tab.id;
     tabIndex = tab.index;
